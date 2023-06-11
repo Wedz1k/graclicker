@@ -1,0 +1,175 @@
+<?php
+// Połączenie z bazą danych MySQL
+$db_host = 'localhost';
+$db_user = 'clicker';
+$db_password = 'NFyuDpA1DW';
+$db_name = 'dedmenxd';
+$db_table = 'clicker_progress';
+
+$conn = new mysqli($db_host, $db_user, $db_password, $db_name);
+
+// Sprawdź, czy udało się połączyć z bazą danych
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
+// Utwórz tabelę clicker_progress, jeśli nie istnieje
+$create_table_query = "CREATE TABLE IF NOT EXISTS $db_table (
+    id INT(11) UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    user_id INT(11) NOT NULL,
+    points INT(11) NOT NULL,
+    autoclicker_level INT(11) NOT NULL,
+    autoclicker_cost INT(11) NOT NULL
+)";
+
+$conn->query($create_table_query);
+
+// Pobierz identyfikator sesji
+session_start();
+$user_id = 0;
+
+// Jeśli użytkownik nie jest zalogowany, przekieruj go do strony logowania
+//if (!$user_id) {
+//    header('Location: login.php');
+//    exit();
+//}
+
+// Pobierz dane postępu użytkownika
+$select_query = "SELECT * FROM $db_table WHERE user_id = $user_id";
+$result = $conn->query($select_query);
+
+// Jeśli nie ma żadnego rekordu dla użytkownika, utwórz nowy rekord
+if ($result->num_rows === 0) {
+    $insert_query = "INSERT INTO $db_table (user_id, points, autoclicker_level, autoclicker_cost)
+        VALUES ($user_id, 0, 1, 10)";
+    $conn->query($insert_query);
+}
+$userID = $_POST['user_id']; // Pobierz przekazany identyfikator użytkownika
+
+// Wykonaj zapytania SQL z uwzględnieniem identyfikatora użytkownika
+$saveQuery = "INSERT INTO tabela_wynikow (user_id, wynik) VALUES ('$userID', '$wynik')";
+$selectQuery = "SELECT wynik FROM tabela_wynikow WHERE user_id = '$userID'";
+// ...
+
+// Wykonaj odpowiednie operacje na bazie danych
+// ...
+
+// Pobierz dane postępu użytkownika
+$select_query = "SELECT * FROM $db_table WHERE user_id = $user_id";
+$result = $conn->query($select_query);
+$row = $result->fetch_assoc();
+
+$points = $row['points'];
+$autoclicker_level = $row['autoclicker_level'];
+$autoclicker_cost = $row['autoclicker_cost'];
+
+// Obsługa kliknięcia przycisku
+if (isset($_POST['click'])) {
+    $points++;
+    $update_query = "UPDATE $db_table SET points = $points WHERE user_id = $user_id";
+    $conn->query($update_query);
+    exit(json_encode(['points' => $points]));
+}
+
+// Obsługa zakupu autoclickera
+if (isset($_POST['buy_autoclicker'])) {
+    if ($points >= $autoclicker_cost) {
+        $points -= $autoclicker_cost;
+        $autoclicker_level++;
+        $autoclicker_cost *= 2;
+
+        $update_query = "UPDATE $db_table SET points = $points, autoclicker_level = $autoclicker_level,
+            autoclicker_cost = $autoclicker_cost WHERE user_id = $user_id";
+        $conn->query($update_query);
+        exit(json_encode(['points' => $points, 'autoclicker_level' => $autoclicker_level, 'autoclicker_cost' => $autoclicker_cost]));
+    } else {
+        exit(json_encode(['error' => 'Insufficient points!']));
+    }
+}
+
+// Pobierz aktualne dane postępu użytkownika
+$select_query = "SELECT * FROM $db_table WHERE user_id = $user_id";
+$result = $conn->query($select_query);
+$row = $result->fetch_assoc();
+
+$points = $row['points'];
+$autoclicker_level = $row['autoclicker_level'];
+$autoclicker_cost = $row['autoclicker_cost'];
+
+
+// Zamknij połączenie z bazą danych
+$conn->close();
+?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Clicker Game</title>
+</head>
+<body>
+    <h1>Clicker Game</h1>
+    <p>Points: <span id="points"><?php echo $points; ?></span></p>
+    <button id="clickButton">Click Me!</button>
+    <br><br>
+    <h2>Autoclicker</h2>
+    <p>Autoclicker Level: <span id="autoclickerLevel"><?php echo $autoclicker_level; ?></span></p>
+    <p>Autoclicker Cost: <span id="autoclickerCost"><?php echo $autoclicker_cost; ?></span> points</p>
+    <button id="buyAutoclickerButton">Buy Autoclicker</button>
+
+    <script>
+    var userId = 123; // Zastąp odpowiednim identyfikatorem użytkownika
+    var requestData = 'get_progress=true&user_id=' + userId;
+
+    xhr.send(requestData);
+        // Obsługa kliknięcia przycisku
+        document.getElementById('clickButton').addEventListener('click', function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://clickergra.cba.pl/wp-content/themes/twentytwentyone/page-47.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    document.getElementById('points').textContent = response.points;
+                }
+            };
+            xhr.send('click=true');
+        });
+
+        // Obsługa zakupu autoclickera
+        document.getElementById('buyAutoclickerButton').addEventListener('click', function() {
+            var xhr = new XMLHttpRequest();
+            xhr.open('POST', 'http://clickergra.cba.pl/wp-content/themes/twentytwentyone/page-47.php', true);
+            xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+            xhr.onreadystatechange = function() {
+                if (xhr.readyState === 4 && xhr.status === 200) {
+                    var response = JSON.parse(xhr.responseText);
+                    if (response.error) {
+                        alert(response.error);
+                    } else {
+                        document.getElementById('points').textContent = response.points;
+                        document.getElementById('autoclickerLevel').textContent = response.autoclicker_level;
+                        document.getElementById('autoclickerCost').textContent = response.autoclicker_cost;
+                    }
+                }
+            };
+            xhr.send('buy_autoclicker=true');
+        });
+
+        // Aktualizuj wynik co sekundę
+        
+
+        setInterval(function() {
+    var xhr = new XMLHttpRequest();
+    xhr.open('POST', '/page-47.php', true);
+      xhr.setRequestHeader('Content-Type', 'application/x-www-form-urlencoded');
+    xhr.onreadystatechange = function() {
+        if (xhr.readyState === 4 && xhr.status === 200) {
+           console.log(xhr.responseText); // Wyświetl odpowiedź serwera w konsoli
+            // ... pozostała część kodu obsługującego odpowiedź
+        }
+    };
+    xhr.send('get_progress=true');
+}, 1000);
+
+    </script>
+</body>
+</html>
